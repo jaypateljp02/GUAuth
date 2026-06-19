@@ -9,10 +9,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Database
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://postgres:1234@localhost:5432/groundup"
-)
+# Render supplies DATABASE_URL with the legacy "postgres://" scheme.
+# SQLAlchemy 2.0 only accepts "postgresql://", so we normalise here.
+_raw_db_url = os.getenv("DATABASE_URL", "postgresql://postgres:1234@localhost:5432/groundup")
+DATABASE_URL = _raw_db_url.replace("postgres://", "postgresql://", 1) if _raw_db_url.startswith("postgres://") else _raw_db_url
 
 # JWT Settings
 JWT_SECRET = os.getenv("JWT_SECRET", "ground-up-dev-secret-change-in-production")
