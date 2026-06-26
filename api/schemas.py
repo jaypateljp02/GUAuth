@@ -31,6 +31,8 @@ class UserResponse(BaseModel):
     role: str
     active: bool
     created_at: Optional[datetime] = None
+    preferred_locale: Optional[str] = "en"
+    receive_reports: bool = True
 
     class Config:
         from_attributes = True
@@ -41,6 +43,8 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     role: str = "employee"
+    receive_reports: Optional[bool] = True
+    preferred_locale: Optional[str] = "en"
 
 
 class UserUpdate(BaseModel):
@@ -48,6 +52,8 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     role: Optional[str] = None
     active: Optional[bool] = None
+    preferred_locale: Optional[str] = None
+    receive_reports: Optional[bool] = None
 
 
 class MessageResponse(BaseModel):

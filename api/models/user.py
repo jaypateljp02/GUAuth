@@ -27,6 +27,8 @@ class User(Base):
     )
     active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    preferred_locale = Column(String(10), nullable=True, default="en")
+    receive_reports = Column(Boolean, default=True)
 
     def __repr__(self):
         return f"<User {self.name} ({self.role})>"

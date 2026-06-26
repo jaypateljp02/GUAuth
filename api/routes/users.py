@@ -23,9 +23,9 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 def list_users(
     active: bool = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(get_current_user),
 ):
-    """List all users. Admin only. Optionally filter by active status."""
+    """List all users. Optionally filter by active status."""
     query = db.query(User)
     if active is not None:
         query = query.filter(User.active == active)
@@ -75,6 +75,8 @@ def create_user(
         email=request.email,
         password=pwd_context.hash(request.password),
         role=request.role,
+        receive_reports=request.receive_reports if request.receive_reports is not None else True,
+        preferred_locale=request.preferred_locale if request.preferred_locale is not None else "en",
     )
     db.add(user)
     db.commit()
@@ -96,12 +98,26 @@ def update_user(
 
     if request.name is not None:
         user.name = request.name
+        # Propagate name change to tasks.issue_messages history
+        from sqlalchemy import text
+        try:
+            db.execute(
+                text("UPDATE tasks.issue_messages SET sender_name = :new_name WHERE sender_id = :uid"),
+                {"new_name": request.name, "uid": user.id}
+            )
+        except Exception as e:
+            print(f"Failed to update historic sender names: {e}")
+            
     if request.email is not None:
         user.email = request.email
     if request.role is not None:
         user.role = request.role
     if request.active is not None:
         user.active = request.active
+    if request.preferred_locale is not None:
+        user.preferred_locale = request.preferred_locale
+    if request.receive_reports is not None:
+        user.receive_reports = request.receive_reports
 
     db.commit()
     db.refresh(user)
@@ -123,3 +139,28 @@ def reset_password(
     user.password = pwd_context.hash(new_password)
     db.commit()
     return MessageResponse(message=f"Password reset for {user.name}")
+
+
+@router.get("/profile", response_model=UserResponse)
+def get_profile(
+    current_user: User = Depends(get_current_user),
+):
+    """Get the current logged-in user's profile."""
+    return UserResponse.model_validate(current_user)
+
+
+@router.put("/profile/locale", response_model=UserResponse)
+def update_profile_locale(
+    preferred_locale: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update the current user's preferred language."""
+    if preferred_locale not in ["en", "hi", "mr", "bn"]:
+        raise HTTPException(status_code=400, detail="Invalid language locale code. Must be one of en, hi, mr, bn.")
+    
+    current_user.preferred_locale = preferred_locale
+    db.commit()
+    db.refresh(current_user)
+    return UserResponse.model_validate(current_user)
+
