@@ -32,7 +32,7 @@ class UserResponse(BaseModel):
     active: bool
     created_at: Optional[datetime] = None
     preferred_locale: Optional[str] = "en"
-    receive_reports: bool = True
+    receive_reports: Optional[bool] = True
 
     class Config:
         from_attributes = True
